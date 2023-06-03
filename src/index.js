@@ -4,52 +4,16 @@ import * as webglUtils from "./webgl-utils.js";
 const canvas = document.getElementById("pedestal");
 initWebGl(canvas)
 
-const vs = `
-  attribute vec3 a_position;
-  attribute vec2 aTexCoord;
-  attribute vec3 a_normal;
 
-  uniform mat4 u_projection;
-  uniform mat4 u_view;
-  uniform mat4 u_world;
-
-  varying vec3 v_normal;
-  varying vec2 vTexCoord;
-
-  void main() {
-    vTexCoord = aTexCoord;
-    gl_Position = u_projection * u_view * u_world * vec4(a_position, 1.0);
-    v_normal = normalize(mat3(u_world) * a_normal);
-  }
-  `;
-
-const fs = `
-  precision mediump float;
-
-  varying vec3 v_normal;
-  varying vec2 vTexCoord;
-
-  uniform vec4 u_diffuse;
-  uniform vec3 u_lightDirection;
-  
-  uniform sampler2D uNormalMap;
-
-  void main () {
-    vec3 normalMap = texture2D(uNormalMap, vTexCoord).rgb;
-    vec3 normal = normalize(v_normal);
-    float fakeLight = dot(u_lightDirection, normal) * .5 + .5;
-    vec3 finalColor = u_diffuse.rgb * fakeLight;
-    gl_FragColor = vec4(finalColor, u_diffuse.a);
-  }
-  `;
-
-
+let curShininess = 0.0
+let curKA = 0.0
+let curKD = 0.0
+let curKS = 0.0
 let meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
 
 async function main() {
     // Get A WebGL context
     /** @type {HTMLCanvasElement} */
-
     const response = await fetch('src/sphere.obj');
     const text = await response.text();
     const data = parseOBJ(text);
@@ -72,7 +36,7 @@ async function main() {
     const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
 
     const cameraTarget = [0, 0, 0];
-    const cameraPosition = [0, 0, 5];
+    const cameraPosition = [0, 0, 3];
     const zNear = 0.1;
     const zFar = 50;
 
@@ -84,9 +48,13 @@ async function main() {
     let u_world = new Float32Array(16);
     glMatrix.mat4.identity(u_world)
     let difAngle = 0.1
-    let bumpMapTexture = registerTexture("src//img//bump_map.jpg")
+    let bumpMapTexture = registerTexture("src//img//mapping.png")
 
     let uNormalMapUniform = gl.getUniformLocation(meshProgramInfo.program, "uNormalMap");
+
+
+    setAllRanges()
+
     function render(time) {
         time *= 0.001;  // convert to seconds
 
@@ -109,7 +77,7 @@ async function main() {
         // Make a view matrix from the camera matrix.
 
         let lightDir = [0, 0, 0]
-        glMatrix.vec3.normalize(lightDir, [-1.0, 3.0, 5.0])
+        glMatrix.vec3.normalize(lightDir, [-10.0, 10.0, 14])
         const sharedUniforms = {
             u_lightDirection: lightDir,
             u_view: camera,
@@ -119,7 +87,7 @@ async function main() {
         gl.useProgram(meshProgramInfo.program);
 
 
-        gl.uniform1i(uNormalMapUniform,  0);
+        gl.uniform1i(uNormalMapUniform, 0);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, bumpMapTexture);
         // calls gl.uniform
@@ -132,10 +100,15 @@ async function main() {
         // calls gl.uniform
         webglUtils.setUniforms(meshProgramInfo, {
             u_world: u_world,
-            u_diffuse: [1, 0.647, 0.0, 1],
+            shininessVal: curShininess,
+            Ka: curKA,
+            Kd: curKD,
+            Ks: curKS,
+            ambientColor: [0.5, 0.3, 0.01],
+            diffuseColor: [1, 0.647, 0.0],
+            specularColor: [1.0, 1.0, 1.0],
         });
 
-        // calls gl.drawArrays or gl.drawElements
         webglUtils.drawBufferInfo(gl, bufferInfo);
 
         requestAnimationFrame(render);
@@ -145,3 +118,39 @@ async function main() {
 }
 
 main();
+
+
+
+
+
+function setAllRanges(){
+    let shininessElement = document.getElementById('shininess')
+    curShininess = shininessElement.value
+
+    shininessElement.addEventListener("input", () => {
+        curShininess = shininessElement.value
+    });
+
+    let kaElement = document.getElementById('KA')
+    curKA = kaElement.value / 1000
+
+    kaElement.addEventListener("input", () => {
+        curKA = kaElement.value / 1000
+    });
+
+
+    let kdElement = document.getElementById('KD')
+    curKD = kdElement.value / 1000
+
+    kdElement.addEventListener("input", () => {
+        curKD = kdElement.value / 1000
+    });
+
+
+    let ksElement = document.getElementById('KS')
+    curKS = ksElement.value / 1000
+
+    ksElement.addEventListener("input", () => {
+        curKS = ksElement.value / 1000
+    });
+}

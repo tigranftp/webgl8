@@ -5,8 +5,36 @@
 </head>
 <body>
 
+
+
 <canvas id="pedestal" width="600px" height="600px">
 </canvas>
+
+
+<div>
+    <input type="range" id="shininess" name="shininess"
+           min="0" max="128">
+    <label for="shininess">Shininess</label>
+</div>
+
+<div>
+    <input type="range" id="KA" name="KA" value = "200"
+           min="0" max="1000">
+    <label for="KA">KA</label>
+</div>
+
+<div>
+    <input type="range" id="KD" name="KD" value = "1000"
+           min="0" max="1000">
+    <label for="KD">KD</label>
+</div>
+
+<div>
+    <input type="range" id="KS" name="KS" value = "1000"
+           min="0" max="1000">
+    <label for="KS">KS</label>
+</div>
+
 
 <script src="src/gl-matrix.js"></script>
 <script src="src/shaders.js"></script>

@@ -191,7 +191,7 @@ function setTextures(imgSRC) {
 function parseOBJ(text) {
     // because indices are base 1 let's just fill in the 0th data
     const objPositions = [[0, 0, 0]];
-    const objTexcoords = [[0, 0]];
+    const objTexcoords = [[0, 0, 0]];
     const objNormals = [[0, 0, 0]];
 
     // same order as `f` indices
@@ -237,8 +237,9 @@ function parseOBJ(text) {
             objNormals.push(parts.map(parseFloat));
         },
         vt(parts) {
+
             // should check for missing v and extra w?
-            objTexcoords.push(parts.map(parseFloat));
+            objTexcoords.push(parts.map(parseFloat).slice(0,2));
         },
         f(parts) {
             const numTriangles = parts.length - 2;
@@ -277,3 +278,4 @@ function parseOBJ(text) {
         normal: webglVertexData[2],
     };
 }
+

@@ -1,53 +1,59 @@
-let vsSource =
-    [
-        'precision mediump float;',
-        'attribute vec3 vertPositions;',
-        'attribute vec3 vertColor;',
-        'attribute vec3 a_normal;',
-        'attribute vec2 aTextureCoord;',
-        'varying vec3 fragColor;',
-        'varying vec3 v_normal;',
-        '',
-        'uniform vec3 uColors;',
-        'uniform mat4 mWorld;',
-        'uniform mat4 mView;',
-        'uniform mat4 mProj;',
-        'uniform vec3 u_lightWorldPosition;',
-        'varying vec3 v_surfaceToLight;',
-        'varying highp vec2 vTextureCoords;',
-        '',
-        'void main()',
-        '{',
-        '   fragColor = uColors;',
-        '   vec3 surfaceWorldPosition = (mWorld * vec4(vertPositions, 1.0)).xyz;',
-        '   v_surfaceToLight = u_lightWorldPosition - surfaceWorldPosition;',
-        '   v_normal = mat3(mWorld) * a_normal;',
-        '   vTextureCoords = aTextureCoord;',
-        '   gl_Position = mProj * mView * mWorld * vec4(vertPositions, 1.0);',
-        '}',
-    ].join('\n');
 
-let fsSource =
-    [
-        'precision mediump float;',
-        '',
-        'varying vec3 fragColor;',
-        'varying vec3 v_normal;',
-        'varying vec3 v_surfaceToLight;',
-        'varying vec2 vTextureCoords;',
-        'uniform float coefOfColor;',
-        'uniform sampler2D uSampler;',
-        'uniform sampler2D uSampler2;',
-        'void main()',
-        '{',
-        'vec3 normal = normalize(v_normal);',
-        'vec3 surfaceToLightDirection = normalize(v_surfaceToLight);',
-        'float light = dot(normal, surfaceToLightDirection);',
-        'vec4 color0 = texture2D(uSampler, vTextureCoords);',
-        'vec4 color1 = texture2D(uSampler2, vTextureCoords);',
-        'vec4 color2 = vec4(fragColor, 1.0) ;',
-        'gl_FragColor = color0  * ( color1 * (1.0 - coefOfColor)  + color2 * coefOfColor);',
-        'gl_FragColor.rgb *= light;',
-        '',
-        '}',
-    ].join('\n');
+const vs = `
+  attribute vec3 a_position;
+  attribute vec2 a_texcoord;
+  attribute vec3 a_normal;
+
+  uniform mat4 u_projection;
+  uniform mat4 u_view;
+  uniform mat4 u_world;
+
+  varying vec3 v_normal;
+  varying vec2 v_texcoord;
+  varying vec3 vertPos;
+
+  void main() {
+    vec4 vertPos4 = u_view * vec4(a_position, 1.0);
+    vertPos = vec3(vertPos4) / vertPos4.w;
+    v_texcoord = a_texcoord;
+    gl_Position = u_projection * u_view * u_world * vec4(a_position, 1.0);
+    v_normal = normalize(mat3(u_world) * a_normal);
+  }
+  `;
+
+const fs = `
+  precision mediump float;
+
+  varying vec3 v_normal;
+  varying vec2 v_texcoord;
+  varying vec3 vertPos;  
+
+  uniform vec3 u_lightDirection;
+  uniform float Ka;   // Ambient reflection coefficient
+  uniform float Kd;   // Diffuse reflection coefficient
+  uniform float Ks;   // Specular reflection coefficient
+  uniform vec3 ambientColor;
+  uniform vec3 diffuseColor;
+  uniform vec3 specularColor;
+  uniform float shininessVal;
+  
+  uniform sampler2D uNormalMap;
+
+  void main () {
+    vec3 normalMap = v_normal + texture2D(uNormalMap, v_texcoord).rgb;
+    vec3 N =  normalize(normalMap * 2.0 - 1.0);
+    vec3 L = normalize(u_lightDirection);
+    float lambertian = max(dot(N, L), 0.0);
+    float specular = 0.0;
+    if(lambertian > 0.0) {
+      vec3 R = normalize(reflect(-L, N));      // Reflected light vector
+      vec3 V = normalize(-vertPos); // Vector to viewer
+      float specAngle = max(dot(R, V), 0.0);
+      specular = pow(specAngle, shininessVal);
+    }
+    
+    gl_FragColor = vec4(Ka * ambientColor +
+                      Kd * lambertian * diffuseColor +
+                      Ks * specular * specularColor, 1.0);
+  }
+  `;
