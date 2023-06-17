@@ -10,6 +10,7 @@ let curKA = 0.0
 let curKD = 0.0
 let curKS = 0.0
 let meshProgramInfo = webglUtils.createProgramInfo(gl, [vs, fs]);
+let stepSize = 0.0
 
 async function main() {
     // Get A WebGL context
@@ -17,26 +18,11 @@ async function main() {
     const response = await fetch('src/sphere.obj');
     const text = await response.text();
     const data = parseOBJ(text);
-    console.log(data)
 
-    // Because data is just named arrays like this
-    //
-    // {
-    //   position: [...],
-    //   texcoord: [...],
-    //   normal: [...],
-    // }
-    //
-    // and because those names match the attributes in our vertex
-    // shader we can pass it directly into `createBufferInfoFromArrays`
-    // from the article "less code more fun".
-
-    // create a buffer for each array by calling
-    // gl.createBuffer, gl.bindBuffer, gl.bufferData
     const bufferInfo = webglUtils.createBufferInfoFromArrays(gl, data);
 
     const cameraTarget = [0, 0, 0];
-    const cameraPosition = [0, 0, 3];
+    const cameraPosition = [0, 0, 5];
     const zNear = 0.1;
     const zFar = 50;
 
@@ -48,7 +34,7 @@ async function main() {
     let u_world = new Float32Array(16);
     glMatrix.mat4.identity(u_world)
     let difAngle = 0.1
-    let bumpMapTexture = registerTexture("src//img//mapping.png")
+    let bumpMapTexture = registerTexture("src//img//Orange-bumpmap.png")
 
     let uNormalMapUniform = gl.getUniformLocation(meshProgramInfo.program, "uNormalMap");
 
@@ -77,11 +63,12 @@ async function main() {
         // Make a view matrix from the camera matrix.
 
         let lightDir = [0, 0, 0]
-        glMatrix.vec3.normalize(lightDir, [-10.0, 10.0, 14])
+        glMatrix.vec3.normalize(lightDir, [0, 0, 1])
         const sharedUniforms = {
             u_lightDirection: lightDir,
             u_view: camera,
-            u_projection: projection
+            u_projection: projection,
+            stepSize: stepSize
         };
 
         gl.useProgram(meshProgramInfo.program);
@@ -105,7 +92,7 @@ async function main() {
             Kd: curKD,
             Ks: curKS,
             ambientColor: [0.5, 0.3, 0.01],
-            diffuseColor: [1, 0.647, 0.0],
+            diffuseColor: [1, 0.55, 0.0],
             specularColor: [1.0, 1.0, 1.0],
         });
 
@@ -153,4 +140,39 @@ function setAllRanges(){
     ksElement.addEventListener("input", () => {
         curKS = ksElement.value / 1000
     });
+
+
+    document.addEventListener('keydown', (event) => {
+        let key = event.key;
+        switch (key) {
+            case "B":
+            case "b":
+            case "и":
+            case "И":
+                console.log(key)
+        }
+    })
+}
+
+function handleTextureLoaded(image, texture) {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+}
+
+
+
+function registerTexture(imgSRC) {
+    let texture = gl.createTexture();
+    let image = new Image();
+    image.onload = function () {
+        handleTextureLoaded(image, texture);
+        stepSize = (1.0 / (image.width))
+    }
+    image.src = imgSRC;
+    return texture
 }

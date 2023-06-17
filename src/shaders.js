@@ -1,4 +1,3 @@
-
 const vs = `
   attribute vec3 a_position;
   attribute vec2 a_texcoord;
@@ -36,11 +35,15 @@ const fs = `
   uniform vec3 diffuseColor;
   uniform vec3 specularColor;
   uniform float shininessVal;
-  
+  uniform float stepSize;
   uniform sampler2D uNormalMap;
 
   void main () {
-    vec3 normalMap = v_normal + texture2D(uNormalMap, v_texcoord).rgb;
+
+  vec3 xGradient = texture2D(uNormalMap, vec2(v_texcoord.x - stepSize, v_texcoord.y)).xyz - texture2D(uNormalMap, vec2(v_texcoord.x + stepSize, v_texcoord.y)).xyz;
+  vec3 yGradient = texture2D(uNormalMap, vec2(v_texcoord.x, v_texcoord.y - stepSize)).xyz - texture2D(uNormalMap, vec2(v_texcoord.x, v_texcoord.y + stepSize)).xyz;
+  
+    vec3 normalMap = v_normal + v_texcoord.x * xGradient + v_texcoord.y * yGradient;
     vec3 N =  normalize(normalMap * 2.0 - 1.0);
     vec3 L = normalize(u_lightDirection);
     float lambertian = max(dot(N, L), 0.0);
